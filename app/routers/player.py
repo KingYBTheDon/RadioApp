@@ -141,6 +141,8 @@ async def vibe_radio(request: Request):
             return JSONResponse({"error": "no_playlists", "message": "No playlists found. Create some mood playlists on Spotify first!"})
 
         match = match_vibe(vibe_text, playlists)
+        print(f"[VIBE] playlists found: {[p['name'] for p in playlists]}")
+        print(f"[VIBE] matched: {[p['name'] for p in match['matched_playlists']]}")
         matched = match["matched_playlists"]
         audio_targets = match["audio_targets"]
         mood_label = match["mood_label"]
@@ -207,11 +209,13 @@ async def dj_clip(request: Request):
         from app.services.dj_service import generate_dj_clip
         filename = generate_dj_clip(current, next_track, news)
         if not filename:
-            return JSONResponse({"error": "generation_failed"}, status_code=500)
+            return JSONResponse({"error": "generation_failed", "detail": "generate_dj_clip returned None"}, status_code=500)
 
         return JSONResponse({"filename": filename, "url": f"/player/dj-audio/{filename}"})
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e), "type": type(e).__name__}, status_code=500)
 
 
 @router.get("/dj-audio/{filename}")
