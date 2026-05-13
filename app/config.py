@@ -21,5 +21,7 @@ SPOTIFY_SCOPES = (
     "user-read-currently-playing "
     "user-top-read "
     "user-library-read "
+    "playlist-read-private "
+    "playlist-read-collaborative "
     "streaming"
 )
