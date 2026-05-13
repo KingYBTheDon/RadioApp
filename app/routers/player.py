@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import spotipy
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
