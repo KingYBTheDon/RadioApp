@@ -134,12 +134,15 @@ class SpotifyService:
         """Return track URIs from a playlist, shuffled."""
         try:
             result = self.sp.playlist_tracks(playlist_id, limit=limit)
-            uris = [
-                item["track"]["uri"]
-                for item in result.get("items", [])
-                if item.get("track") and item["track"].get("uri")
-                and item["track"].get("type") == "track"
-            ]
+            uris = []
+            for item in result.get("items", []):
+                track = item.get("track") if item else None
+                if not track:
+                    continue
+                uri = track.get("uri", "")
+                # Skip local files and podcast episodes
+                if uri and not uri.startswith("spotify:local:") and not uri.startswith("spotify:episode:"):
+                    uris.append(uri)
             random.shuffle(uris)
             print(f"[PLAYLIST] {playlist_id}: got {len(uris)} tracks")
             return uris
