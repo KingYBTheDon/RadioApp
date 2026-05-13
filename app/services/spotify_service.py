@@ -112,24 +112,20 @@ class SpotifyService:
             return []
 
     def get_user_playlists(self, limit: int = 50) -> list[dict]:
-        """Return the user's own playlists."""
+        """Return all playlists the user owns or follows."""
         try:
             result = self.sp.current_user_playlists(limit=limit)
-            user_id = self.sp.current_user()["id"]
             playlists = []
             for pl in result.get("items", []):
                 if not pl:
                     continue
-                # Include playlists owned by the user
-                owner = pl.get("owner", {}).get("id", "")
-                if owner == user_id:
-                    images = pl.get("images", [])
-                    playlists.append({
-                        "id": pl["id"],
-                        "name": pl["name"],
-                        "track_count": pl.get("tracks", {}).get("total", 0),
-                        "image": images[0]["url"] if images else None,
-                    })
+                images = pl.get("images", [])
+                playlists.append({
+                    "id": pl["id"],
+                    "name": pl["name"],
+                    "track_count": pl.get("tracks", {}).get("total", 0),
+                    "image": images[0]["url"] if images else None,
+                })
             return playlists
         except Exception:
             return []
