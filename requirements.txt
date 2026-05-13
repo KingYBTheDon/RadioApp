@@ -5,3 +5,5 @@ pydantic-settings
 python-multipart
 itsdangerous
 python-dotenv
+anthropic
+httpx

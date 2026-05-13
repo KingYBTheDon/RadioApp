@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
+
 import spotipy
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.routers.auth import get_valid_token
 from app.services.spotify_service import SpotifyService
@@ -188,3 +190,37 @@ async def vibe_radio(request: Request):
         })
     except spotipy.SpotifyException as e:
         return _spotify_error_response(e)
+
+
+@router.post("/dj-clip")
+async def dj_clip(request: Request):
+    """Generate a DJ intro clip for the current track transition."""
+    svc = _get_service(request)
+    if not svc:
+        return JSONResponse({"error": "not_logged_in"}, status_code=401)
+    try:
+        body = await request.json()
+        current = body.get("current")
+        next_track = body.get("next")
+        news = body.get("news")
+
+        from app.services.dj_service import generate_dj_clip
+        filename = generate_dj_clip(current, next_track, news)
+        if not filename:
+            return JSONResponse({"error": "generation_failed"}, status_code=500)
+
+        return JSONResponse({"filename": filename, "url": f"/player/dj-audio/{filename}"})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.get("/dj-audio/{filename}")
+async def dj_audio(filename: str):
+    """Serve a generated DJ audio clip."""
+    if not filename.endswith(".mp3") or "/" in filename or ".." in filename:
+        return JSONResponse({"error": "invalid"}, status_code=400)
+    tmp_dir = os.path.join(os.path.dirname(__file__), "..", "..", "tmp")
+    filepath = os.path.join(tmp_dir, filename)
+    if not os.path.isfile(filepath):
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    return FileResponse(filepath, media_type="audio/mpeg")

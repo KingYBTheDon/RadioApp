@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     spotify_client_secret: str
     spotify_redirect_uri: str = "http://localhost:8000/auth/callback"
     secret_key: str
+    anthropic_api_key: str = ""
+    elevenlabs_api_key: str = ""
 
     class Config:
         env_file = ".env"

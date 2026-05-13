@@ -4,6 +4,13 @@ let durationMs = 0;
 let isPlaying = false;
 let progressInterval = null;
 
+// DJ state
+let djEnabled = false;
+let lastTrackUri = null;
+let djAudio = null;
+let djBusy = false;
+let pendingTrackData = null;
+
 // ===== DOM refs =====
 const loginScreen    = document.getElementById("login-screen");
 const playerScreen   = document.getElementById("player-screen");
@@ -21,6 +28,7 @@ const btnSkip        = document.getElementById("btn-skip");
 const btnPrev        = document.getElementById("btn-prev");
 const btnStartRadio  = document.getElementById("btn-start-radio");
 const btnVibe        = document.getElementById("btn-vibe");
+const btnDj          = document.getElementById("btn-dj");
 const vibeOverlay    = document.getElementById("vibe-overlay");
 const vibeClose      = document.getElementById("vibe-close");
 const vibeInput      = document.getElementById("vibe-input");
@@ -122,10 +130,26 @@ function applyTrack(data) {
 async function pollNowPlaying() {
   try {
     const res = await fetch("/player/now-playing");
-    if (res.status === 401) return; // not logged in, handled separately
+    if (res.status === 401) return;
     const data = await res.json();
-    if (data.error === "no_device") return; // silently ignore when no device
-    applyTrack(data);
+    if (data.error === "no_device") return;
+
+    // Detect track change for DJ mode
+    const newUri = data.uri || null;
+    if (djEnabled && newUri && newUri !== lastTrackUri && !djBusy && data.type === "track") {
+      const prev = pendingTrackData;
+      pendingTrackData = data;
+      if (lastTrackUri !== null) {
+        // A new song just started — trigger DJ intro
+        triggerDjClip(prev, data);
+      }
+      lastTrackUri = newUri;
+    } else if (newUri && newUri !== lastTrackUri) {
+      lastTrackUri = newUri;
+      pendingTrackData = data;
+    }
+
+    if (!djBusy) applyTrack(data);
   } catch (_) {}
 }
 
@@ -218,6 +242,59 @@ btnStartRadio.addEventListener("click", async () => {
   }
   btnStartRadio.disabled = false;
 });
+
+// ===== DJ Mode =====
+btnDj.addEventListener("click", () => {
+  djEnabled = !djEnabled;
+  btnDj.textContent = djEnabled ? "🎙️ DJ On" : "🎙️ DJ Off";
+  btnDj.classList.toggle("active", djEnabled);
+  setStatus(djEnabled ? "DJ mode on — Alex will introduce each song!" : "DJ mode off");
+  setTimeout(() => setStatus(""), 3000);
+});
+
+async function triggerDjClip(current, next) {
+  if (!djEnabled || djBusy) return;
+  djBusy = true;
+  setStatus("🎙️ Alex is preparing...");
+
+  try {
+    // Pause Spotify while DJ speaks
+    await fetch("/player/play-pause", { method: "POST" });
+
+    const res = await fetch("/player/dj-clip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current, next }),
+    });
+    const data = await res.json();
+
+    if (data.url) {
+      djAudio = new Audio(data.url);
+      djAudio.play();
+      setStatus("🎙️ Alex is on air...");
+      djAudio.onended = async () => {
+        djAudio = null;
+        djBusy = false;
+        setStatus("");
+        // Resume Spotify after DJ clip finishes
+        await fetch("/player/play-pause", { method: "POST" });
+      };
+      djAudio.onerror = async () => {
+        djAudio = null;
+        djBusy = false;
+        setStatus("");
+        await fetch("/player/play-pause", { method: "POST" });
+      };
+    } else {
+      djBusy = false;
+      setStatus("");
+      await fetch("/player/play-pause", { method: "POST" });
+    }
+  } catch (_) {
+    djBusy = false;
+    setStatus("");
+  }
+}
 
 // ===== Vibe modal =====
 btnVibe.addEventListener("click", () => {
