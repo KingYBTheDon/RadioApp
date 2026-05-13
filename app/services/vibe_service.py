@@ -165,7 +165,8 @@ def match_vibe(vibe_text: str, playlists: list[dict]) -> dict:
             "method": "keywords" | "claude",
         }
     """
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    from app.config import settings
+    api_key = settings.anthropic_api_key
     if api_key:
         return _match_with_claude(vibe_text, playlists, api_key)
     return _match_with_keywords(vibe_text, playlists)

@@ -5,6 +5,7 @@ import time
 import uuid
 import httpx
 import anthropic
+from app.config import settings
 
 # ElevenLabs voice ID — "Charlie": warm, natural radio host voice
 ELEVENLABS_VOICE_ID = "IKne3meq5aSn9XLyUdCD"
@@ -14,7 +15,7 @@ TMP_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "tmp")
 
 def _claude_script(current_track: dict | None, next_track: dict | None, news: str | None = None) -> str:
     """Ask Claude to write a short radio DJ script."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    api_key = settings.anthropic_api_key
     if not api_key:
         return ""
 
@@ -78,7 +79,7 @@ def generate_dj_clip(current_track: dict | None, next_track: dict | None, news: 
     Generate a DJ audio clip and save it to tmp/.
     Returns the filename (not full path) or None if generation failed.
     """
-    elevenlabs_key = os.environ.get("ELEVENLABS_API_KEY", "")
+    elevenlabs_key = settings.elevenlabs_api_key
     if not elevenlabs_key:
         return None
 
