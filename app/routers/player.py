@@ -92,7 +92,18 @@ async def start_radio(request: Request):
     if not svc:
         return JSONResponse({"error": "not_logged_in"}, status_code=401)
     try:
-        result = svc.start_radio_from_library()
-        return JSONResponse(result)
+        from app.services.radio_service import build_radio_queue
+        result = build_radio_queue(svc)
+        uris = result["queue_uris"]
+        if not uris:
+            return JSONResponse({"error": "empty_queue", "message": "Could not build a queue. Save some songs on Spotify first."})
+        svc.sp.start_playback(uris=uris)
+        return JSONResponse({
+            "started": True,
+            "track_count": len(uris),
+            "bubble": result["bubble"],
+            "podcast": result.get("podcast"),
+            "news": result.get("news"),
+        })
     except spotipy.SpotifyException as e:
         return _spotify_error_response(e)

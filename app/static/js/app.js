@@ -23,6 +23,8 @@ const btnStartRadio  = document.getElementById("btn-start-radio");
 const queueList      = document.getElementById("queue-list");
 const statusMsg      = document.getElementById("status-msg");
 const deviceToast    = document.getElementById("device-toast");
+const contentBadge   = document.getElementById("content-badge");
+const bubbleBadge    = document.getElementById("bubble-badge");
 
 // ===== Helpers =====
 function formatMs(ms) {
@@ -87,6 +89,18 @@ function applyTrack(data) {
   } else {
     albumArt.style.display = "none";
     albumPlaceholder.style.display = "flex";
+  }
+
+  // Content type badge
+  if (data.type === "episode") {
+    const isNews = data.artist && (data.artist.includes("News") || data.artist.includes("NPR") || data.artist.includes("BBC") || data.artist.includes("Daily"));
+    contentBadge.textContent = isNews ? "📰 News" : "🎙️ Podcast";
+    contentBadge.className = "content-badge " + (isNews ? "news" : "podcast");
+    contentBadge.classList.remove("hidden");
+  } else {
+    contentBadge.textContent = "🎵 Music";
+    contentBadge.className = "content-badge";
+    contentBadge.classList.remove("hidden");
   }
 
   progressMs = data.progress_ms || 0;
@@ -181,8 +195,15 @@ btnStartRadio.addEventListener("click", async () => {
       showToast(data.message || "Could not start radio.");
       setStatus("");
     } else {
-      setStatus(`Radio started — ${data.track_count} songs shuffled!`);
-      setTimeout(() => setStatus(""), 4000);
+      const bubble = data.bubble ? `${data.bubble.icon} ${data.bubble.name}` : "";
+      bubbleBadge.textContent = bubble;
+      bubbleBadge.classList.toggle("hidden", !bubble);
+
+      let msg = `Radio started`;
+      if (data.podcast) msg += ` · 🎙️ ${data.podcast.show}`;
+      if (data.news)    msg += ` · 📰 ${data.news.show}`;
+      setStatus(msg);
+      setTimeout(() => setStatus(""), 6000);
       setTimeout(pollNowPlaying, 800);
       setTimeout(pollQueue, 1200);
     }

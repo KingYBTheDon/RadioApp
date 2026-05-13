@@ -48,24 +48,6 @@ class SpotifyService:
             "uri": item.get("uri"),
         }
 
-    def get_queue(self) -> list[dict]:
-        """Return the next few tracks in the queue."""
-        try:
-            result = self.sp.queue()
-            tracks = []
-            for item in (result.get("queue") or [])[:5]:
-                if item.get("type") == "track":
-                    artists = ", ".join(a["name"] for a in item.get("artists", []))
-                    images = item.get("album", {}).get("images", [])
-                    tracks.append({
-                        "name": item.get("name", ""),
-                        "artist": artists,
-                        "image": images[-1]["url"] if images else None,
-                    })
-            return tracks
-        except Exception:
-            return []
-
     def play(self) -> None:
         self.sp.start_playback()
 
@@ -105,3 +87,90 @@ class SpotifyService:
         """Get user's top tracks for discovery-based radio."""
         result = self.sp.current_user_top_tracks(limit=limit, time_range="medium_term")
         return result.get("items", [])
+
+    def get_saved_tracks_sample(self, limit: int = 50) -> list[str]:
+        """Return a list of track URIs from the user's saved library."""
+        results = self.sp.current_user_saved_tracks(limit=limit)
+        if not results:
+            return []
+        uris = [item["track"]["uri"] for item in results.get("items", []) if item.get("track")]
+        random.shuffle(uris)
+        return uris
+
+    def get_recommendations(self, seed_track_ids: list, bubble: dict, limit: int = 30) -> list[str]:
+        """Return recommended track URIs based on seed tracks and bubble mood params."""
+        try:
+            result = self.sp.recommendations(
+                seed_tracks=seed_track_ids[:5],
+                target_energy=bubble.get("target_energy", 0.6),
+                target_valence=bubble.get("target_valence", 0.6),
+                target_danceability=bubble.get("target_danceability", 0.6),
+                limit=limit,
+            )
+            return [t["uri"] for t in result.get("tracks", [])]
+        except Exception:
+            return []
+
+    def get_saved_shows(self, limit: int = 10) -> list[dict]:
+        """Return the user's saved podcast shows."""
+        try:
+            result = self.sp.current_user_saved_shows(limit=limit)
+            return [item["show"] for item in result.get("items", []) if item.get("show")]
+        except Exception:
+            return []
+
+    def get_show_latest_episode(self, show_id: str) -> dict | None:
+        """Return the most recent episode of a show."""
+        try:
+            result = self.sp.show_episodes(show_id, limit=1)
+            items = result.get("items", [])
+            return items[0] if items else None
+        except Exception:
+            return None
+
+    def get_news_episode(self) -> dict | None:
+        """Find the latest episode from a known news show on Spotify."""
+        from app.services.radio_service import NEWS_SHOWS
+        for show_name in NEWS_SHOWS:
+            try:
+                results = self.sp.search(q=show_name, type="show", limit=1)
+                shows = results.get("shows", {}).get("items", [])
+                if not shows:
+                    continue
+                show = shows[0]
+                episodes = self.sp.show_episodes(show["id"], limit=1)
+                items = episodes.get("items", [])
+                if items:
+                    ep = items[0]
+                    ep["show"] = show["name"]
+                    return ep
+            except Exception:
+                continue
+        return None
+
+    def get_queue(self) -> list[dict]:
+        """Return the next few tracks in the queue."""
+        try:
+            result = self.sp.queue()
+            tracks = []
+            for item in (result.get("queue") or [])[:5]:
+                if item.get("type") == "track":
+                    artists = ", ".join(a["name"] for a in item.get("artists", []))
+                    images = item.get("album", {}).get("images", [])
+                    tracks.append({
+                        "name": item.get("name", ""),
+                        "artist": artists,
+                        "image": images[-1]["url"] if images else None,
+                        "type": "track",
+                    })
+                elif item.get("type") == "episode":
+                    images = item.get("images", [])
+                    tracks.append({
+                        "name": item.get("name", ""),
+                        "artist": item.get("show", {}).get("name", "Podcast"),
+                        "image": images[0]["url"] if images else None,
+                        "type": "episode",
+                    })
+            return tracks
+        except Exception:
+            return []

@@ -175,6 +175,26 @@ main {
 }
 .ctrl-btn-main:hover { background: var(--green-dark); color: #000; }
 
+.track-meta-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+  min-height: 22px;
+}
+.content-badge, .bubble-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 50px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.content-badge { background: #2a2a2a; color: var(--text-muted); }
+.content-badge.podcast { background: #3d2a5c; color: #c084fc; }
+.content-badge.news    { background: #1e3a2a; color: #4ade80; }
+.bubble-badge { background: #1a2e1a; color: var(--green); border: 1px solid #2a4a2a; }
+
 .status-msg {
   font-size: 13px;
   color: var(--text-muted);
