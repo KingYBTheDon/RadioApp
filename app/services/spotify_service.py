@@ -141,8 +141,10 @@ class SpotifyService:
                 and item["track"].get("type") == "track"
             ]
             random.shuffle(uris)
+            print(f"[PLAYLIST] {playlist_id}: got {len(uris)} tracks")
             return uris
-        except Exception:
+        except Exception as e:
+            print(f"[PLAYLIST ERROR] {playlist_id}: {e}")
             return []
 
     def get_saved_shows(self, limit: int = 10) -> list[dict]:
