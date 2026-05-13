@@ -62,7 +62,10 @@
           <button id="btn-skip" class="ctrl-btn" title="Skip">&#9654;&#9654;</button>
         </div>
 
-        <button id="btn-start-radio" class="btn btn-green">&#9654; Start Radio</button>
+        <div class="radio-btns">
+          <button id="btn-start-radio" class="btn btn-green">&#9654; Start Radio</button>
+          <button id="btn-vibe" class="btn btn-vibe">✨ What's your vibe?</button>
+        </div>
 
         <div id="status-msg" class="status-msg"></div>
       </section>
@@ -75,6 +78,19 @@
         </ul>
       </aside>
     </main>
+  </div>
+
+  <!-- Vibe modal -->
+  <div id="vibe-overlay" class="vibe-overlay hidden">
+    <div class="vibe-modal">
+      <button id="vibe-close" class="vibe-close">&times;</button>
+      <h2 class="vibe-title">What's your vibe?</h2>
+      <p class="vibe-hint">Describe how you're feeling or what you want to hear.<br/>I'll match your mood playlists and find similar songs.</p>
+      <textarea id="vibe-input" class="vibe-input" rows="3"
+        placeholder="e.g. tired but need to focus... happy summer energy... dark moody night..."></textarea>
+      <button id="vibe-submit" class="btn btn-green btn-large">Let's go &rarr;</button>
+      <div id="vibe-result" class="vibe-result hidden"></div>
+    </div>
   </div>
 
   <!-- Error overlay for "no active device" -->

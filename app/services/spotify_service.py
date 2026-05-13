@@ -98,7 +98,7 @@ class SpotifyService:
         return uris
 
     def get_recommendations(self, seed_track_ids: list, bubble: dict, limit: int = 30) -> list[str]:
-        """Return recommended track URIs based on seed tracks and bubble mood params."""
+        """Return recommended track URIs based on seed tracks and mood params."""
         try:
             result = self.sp.recommendations(
                 seed_tracks=seed_track_ids[:5],
@@ -108,6 +108,44 @@ class SpotifyService:
                 limit=limit,
             )
             return [t["uri"] for t in result.get("tracks", [])]
+        except Exception:
+            return []
+
+    def get_user_playlists(self, limit: int = 50) -> list[dict]:
+        """Return the user's own playlists."""
+        try:
+            result = self.sp.current_user_playlists(limit=limit)
+            user_id = self.sp.current_user()["id"]
+            playlists = []
+            for pl in result.get("items", []):
+                if not pl:
+                    continue
+                # Include playlists owned by the user
+                owner = pl.get("owner", {}).get("id", "")
+                if owner == user_id:
+                    images = pl.get("images", [])
+                    playlists.append({
+                        "id": pl["id"],
+                        "name": pl["name"],
+                        "track_count": pl.get("tracks", {}).get("total", 0),
+                        "image": images[0]["url"] if images else None,
+                    })
+            return playlists
+        except Exception:
+            return []
+
+    def get_playlist_tracks(self, playlist_id: str, limit: int = 50) -> list[str]:
+        """Return track URIs from a playlist, shuffled."""
+        try:
+            result = self.sp.playlist_tracks(playlist_id, limit=limit)
+            uris = [
+                item["track"]["uri"]
+                for item in result.get("items", [])
+                if item.get("track") and item["track"].get("uri")
+                and item["track"].get("type") == "track"
+            ]
+            random.shuffle(uris)
+            return uris
         except Exception:
             return []
 

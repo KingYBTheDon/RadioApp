@@ -107,3 +107,84 @@ async def start_radio(request: Request):
         })
     except spotipy.SpotifyException as e:
         return _spotify_error_response(e)
+
+
+@router.get("/playlists")
+async def get_playlists(request: Request):
+    svc = _get_service(request)
+    if not svc:
+        return JSONResponse({"error": "not_logged_in"}, status_code=401)
+    try:
+        return JSONResponse(svc.get_user_playlists())
+    except spotipy.SpotifyException as e:
+        return _spotify_error_response(e)
+
+
+@router.post("/vibe-radio")
+async def vibe_radio(request: Request):
+    svc = _get_service(request)
+    if not svc:
+        return JSONResponse({"error": "not_logged_in"}, status_code=401)
+    try:
+        body = await request.json()
+        vibe_text = (body.get("vibe") or "").strip()
+        if not vibe_text:
+            return JSONResponse({"error": "no_vibe", "message": "Tell me your vibe first!"}, status_code=400)
+
+        from app.services.vibe_service import match_vibe
+        from app.services.radio_service import build_radio_queue
+
+        playlists = svc.get_user_playlists()
+        if not playlists:
+            return JSONResponse({"error": "no_playlists", "message": "No playlists found. Create some mood playlists on Spotify first!"})
+
+        match = match_vibe(vibe_text, playlists)
+        matched = match["matched_playlists"]
+        audio_targets = match["audio_targets"]
+        mood_label = match["mood_label"]
+
+        # Gather tracks from matched playlists
+        import random
+        playlist_uris = []
+        for pl in matched:
+            playlist_uris.extend(svc.get_playlist_tracks(pl["id"], limit=30))
+
+        if not playlist_uris:
+            return JSONResponse({"error": "empty_playlists", "message": "Matched playlists are empty. Add songs to them first!"})
+
+        # Recommendations seeded from playlist tracks
+        seed_ids = [uri.split(":")[-1] for uri in playlist_uris[:5]]
+        rec_uris = svc.get_recommendations(seed_ids, audio_targets, limit=25)
+
+        # Mix: 2 recs per 1 playlist track
+        random.shuffle(playlist_uris)
+        queue = []
+        pl_i = rec_i = 0
+        while len(queue) < 40:
+            for _ in range(2):
+                if rec_i < len(rec_uris):
+                    queue.append(rec_uris[rec_i]); rec_i += 1
+            if pl_i < len(playlist_uris):
+                queue.append(playlist_uris[pl_i]); pl_i += 1
+            if rec_i >= len(rec_uris) and pl_i >= len(playlist_uris):
+                break
+
+        # Slot in podcast + news episodes
+        radio = build_radio_queue(svc, include_podcasts=True, include_news=True)
+        ep_uris = [u for u in radio.get("queue_uris", []) if ":episode:" in u]
+        for i, ep in enumerate(ep_uris):
+            pos = 6 + i * 8
+            queue.insert(min(pos, len(queue)), ep)
+
+        svc.sp.start_playback(uris=queue[:50])
+
+        return JSONResponse({
+            "started": True,
+            "mood_label": mood_label,
+            "matched_playlists": [p["name"] for p in matched],
+            "method": match["method"],
+            "podcast": radio.get("podcast"),
+            "news": radio.get("news"),
+        })
+    except spotipy.SpotifyException as e:
+        return _spotify_error_response(e)

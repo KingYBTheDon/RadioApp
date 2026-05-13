@@ -20,6 +20,12 @@ const btnPlayPause   = document.getElementById("btn-play-pause");
 const btnSkip        = document.getElementById("btn-skip");
 const btnPrev        = document.getElementById("btn-prev");
 const btnStartRadio  = document.getElementById("btn-start-radio");
+const btnVibe        = document.getElementById("btn-vibe");
+const vibeOverlay    = document.getElementById("vibe-overlay");
+const vibeClose      = document.getElementById("vibe-close");
+const vibeInput      = document.getElementById("vibe-input");
+const vibeSubmit     = document.getElementById("vibe-submit");
+const vibeResult     = document.getElementById("vibe-result");
 const queueList      = document.getElementById("queue-list");
 const statusMsg      = document.getElementById("status-msg");
 const deviceToast    = document.getElementById("device-toast");
@@ -211,6 +217,70 @@ btnStartRadio.addEventListener("click", async () => {
     setStatus("");
   }
   btnStartRadio.disabled = false;
+});
+
+// ===== Vibe modal =====
+btnVibe.addEventListener("click", () => {
+  vibeOverlay.classList.remove("hidden");
+  vibeInput.focus();
+  vibeResult.classList.add("hidden");
+  vibeResult.textContent = "";
+});
+
+vibeClose.addEventListener("click", () => vibeOverlay.classList.add("hidden"));
+vibeOverlay.addEventListener("click", (e) => { if (e.target === vibeOverlay) vibeOverlay.classList.add("hidden"); });
+
+vibeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); vibeSubmit.click(); }
+});
+
+vibeSubmit.addEventListener("click", async () => {
+  const vibe = vibeInput.value.trim();
+  if (!vibe) return;
+
+  vibeSubmit.disabled = true;
+  vibeSubmit.textContent = "Finding your vibe...";
+  vibeResult.classList.add("hidden");
+
+  try {
+    const res = await fetch("/player/vibe-radio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vibe }),
+    });
+    const data = await res.json();
+
+    if (data.error || !data.started) {
+      vibeResult.textContent = "⚠️ " + (data.message || "Something went wrong.");
+      vibeResult.style.color = "#f87171";
+      vibeResult.classList.remove("hidden");
+    } else {
+      const plNames = (data.matched_playlists || []).join(", ");
+      let msg = `✨ ${data.mood_label}\n\nPlaying from: ${plNames}`;
+      if (data.podcast) msg += `\n🎙️ Podcast up soon: ${data.podcast.show}`;
+      if (data.news)    msg += `\n📰 News up soon: ${data.news.show}`;
+      vibeResult.style.color = "#c084fc";
+      vibeResult.textContent = msg;
+      vibeResult.classList.remove("hidden");
+
+      bubbleBadge.textContent = `✨ ${data.mood_label}`;
+      bubbleBadge.classList.remove("hidden");
+
+      setTimeout(() => {
+        vibeOverlay.classList.add("hidden");
+        vibeInput.value = "";
+        pollNowPlaying();
+        pollQueue();
+      }, 2800);
+    }
+  } catch (_) {
+    vibeResult.textContent = "⚠️ Could not connect. Is Spotify open on a device?";
+    vibeResult.style.color = "#f87171";
+    vibeResult.classList.remove("hidden");
+  }
+
+  vibeSubmit.disabled = false;
+  vibeSubmit.textContent = "Let's go →";
 });
 
 // ===== Auth check on load =====
