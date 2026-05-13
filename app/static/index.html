@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RadioApp</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="screen hidden">
+    <div class="login-box">
+      <h1>🎙️ RadioApp</h1>
+      <p>Your personal AI-powered radio station</p>
+      <a href="/auth/login" class="btn btn-green btn-large">Connect with Spotify</a>
+      <p class="hint">Requires a Spotify account</p>
+    </div>
+  </div>
+
+  <!-- Player Screen -->
+  <div id="player-screen" class="screen hidden">
+    <header>
+      <div class="logo">🎙️ RadioApp</div>
+      <div class="user-info">
+        <span id="display-name"></span>
+        <a href="/auth/logout" class="btn btn-ghost">Log out</a>
+      </div>
+    </header>
+
+    <main>
+      <!-- Now Playing -->
+      <section class="now-playing">
+        <div class="album-art-wrapper">
+          <img id="album-art" src="" alt="Album art" />
+          <div id="album-art-placeholder" class="album-placeholder">♫</div>
+        </div>
+
+        <div class="track-info">
+          <div id="track-name" class="track-name">—</div>
+          <div id="artist-name" class="artist-name">—</div>
+          <div id="album-name" class="album-name"></div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+          <span id="progress-time" class="time-label">0:00</span>
+          <div class="progress-bar-track">
+            <div id="progress-bar" class="progress-bar-fill"></div>
+          </div>
+          <span id="duration-time" class="time-label">0:00</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+          <button id="btn-prev" class="ctrl-btn" title="Previous">&#9664;&#9664;</button>
+          <button id="btn-play-pause" class="ctrl-btn ctrl-btn-main" title="Play / Pause">&#9654;</button>
+          <button id="btn-skip" class="ctrl-btn" title="Skip">&#9654;&#9654;</button>
+        </div>
+
+        <button id="btn-start-radio" class="btn btn-green">&#9654; Start Radio</button>
+
+        <div id="status-msg" class="status-msg"></div>
+      </section>
+
+      <!-- Queue -->
+      <aside class="queue-panel">
+        <h2>Up Next</h2>
+        <ul id="queue-list" class="queue-list">
+          <li class="queue-empty">Queue is empty</li>
+        </ul>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Error overlay for "no active device" -->
+  <div id="device-toast" class="toast hidden">
+    Open Spotify on your phone or computer, then try again.
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
