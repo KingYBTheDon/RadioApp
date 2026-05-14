@@ -140,7 +140,8 @@ class SpotifyService:
                 print(f"[PLAYLIST ITEM0] {items[0]}")
             uris = []
             for item in items:
-                track = item.get("track") if item else None
+                # Spotify returns track under "item" or "track" depending on API version
+                track = item.get("item") or item.get("track") if item else None
                 if not track:
                     continue
                 uri = track.get("uri", "")
