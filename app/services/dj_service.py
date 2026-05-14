@@ -7,9 +7,9 @@ import httpx
 import anthropic
 from app.config import settings
 
-# ElevenLabs voice ID — "Charlie": warm, natural radio host voice
-ELEVENLABS_VOICE_ID = "IKne3meq5aSn9XLyUdCD"
-ELEVENLABS_MODEL    = "eleven_monolingual_v1"
+# ElevenLabs voice ID — Adam: reliable male voice available on all tiers
+ELEVENLABS_VOICE_ID = "pNInz6obpgDQGcFmaJgB"
+ELEVENLABS_MODEL    = "eleven_turbo_v2_5"
 TMP_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "tmp")
 
 
@@ -67,10 +67,12 @@ def _elevenlabs_tts(text: str, api_key: str) -> bytes | None:
     try:
         with httpx.Client(timeout=20) as client:
             response = client.post(url, headers=headers, json=payload)
+            print(f"[DJ] ElevenLabs status: {response.status_code}")
             if response.status_code == 200:
                 return response.content
-    except Exception:
-        pass
+            print(f"[DJ] ElevenLabs error body: {response.text[:300]}")
+    except Exception as e:
+        print(f"[DJ] ElevenLabs exception: {e}")
     return None
 
 
@@ -81,15 +83,20 @@ def generate_dj_clip(current_track: dict | None, next_track: dict | None, news: 
     """
     elevenlabs_key = settings.elevenlabs_api_key
     if not elevenlabs_key:
+        print("[DJ] No ElevenLabs key found")
         return None
 
     script = _claude_script(current_track, next_track, news)
+    print(f"[DJ] Script: {script!r}")
     if not script:
+        print("[DJ] Claude returned empty script")
         return None
 
     audio = _elevenlabs_tts(script, elevenlabs_key)
     if not audio:
+        print("[DJ] ElevenLabs returned no audio")
         return None
+    print(f"[DJ] Audio generated: {len(audio)} bytes")
 
     os.makedirs(TMP_DIR, exist_ok=True)
 
