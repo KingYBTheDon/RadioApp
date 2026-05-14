@@ -98,7 +98,7 @@ class SpotifyService:
         return uris
 
     def get_recommendations(self, seed_track_ids: list, bubble: dict, limit: int = 30) -> list[str]:
-        """Return recommended track URIs based on seed tracks and mood params."""
+        """Return recommended track URIs. Falls back to artist top tracks if recommendations API is unavailable."""
         try:
             result = self.sp.recommendations(
                 seed_tracks=seed_track_ids[:5],
@@ -107,7 +107,27 @@ class SpotifyService:
                 target_danceability=bubble.get("target_danceability", 0.6),
                 limit=limit,
             )
-            return [t["uri"] for t in result.get("tracks", [])]
+            uris = [t["uri"] for t in result.get("tracks", [])]
+            if uris:
+                return uris
+        except Exception:
+            pass
+
+        # Fallback: get top tracks from artists of the seed tracks
+        try:
+            uris = []
+            seen_artists = set()
+            for track_id in seed_track_ids[:3]:
+                track = self.sp.track(track_id)
+                for artist in track.get("artists", [])[:1]:
+                    aid = artist["id"]
+                    if aid in seen_artists:
+                        continue
+                    seen_artists.add(aid)
+                    top = self.sp.artist_top_tracks(aid)
+                    for t in top.get("tracks", [])[:5]:
+                        uris.append(t["uri"])
+            return uris[:limit]
         except Exception:
             return []
 
@@ -135,9 +155,6 @@ class SpotifyService:
         try:
             result = self.sp.playlist_tracks(playlist_id, limit=limit)
             items = result.get("items", [])
-            print(f"[PLAYLIST RAW] {playlist_id}: total={result.get('total')}, items={len(items)}")
-            if items:
-                print(f"[PLAYLIST ITEM0] {items[0]}")
             uris = []
             for item in items:
                 # Spotify returns track under "item" or "track" depending on API version
@@ -148,10 +165,8 @@ class SpotifyService:
                 if uri and not uri.startswith("spotify:local:") and not uri.startswith("spotify:episode:"):
                     uris.append(uri)
             random.shuffle(uris)
-            print(f"[PLAYLIST] {playlist_id}: got {len(uris)} tracks")
             return uris
-        except Exception as e:
-            print(f"[PLAYLIST ERROR] {playlist_id}: {e}")
+        except Exception:
             return []
 
     def get_saved_shows(self, limit: int = 10) -> list[dict]:

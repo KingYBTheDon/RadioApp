@@ -141,8 +141,6 @@ async def vibe_radio(request: Request):
             return JSONResponse({"error": "no_playlists", "message": "No playlists found. Create some mood playlists on Spotify first!"})
 
         match = match_vibe(vibe_text, playlists)
-        print(f"[VIBE] playlists found: {[p['name'] for p in playlists]}")
-        print(f"[VIBE] matched: {[p['name'] for p in match['matched_playlists']]}")
         matched = match["matched_playlists"]
         audio_targets = match["audio_targets"]
         mood_label = match["mood_label"]
