@@ -244,7 +244,17 @@ btnStartRadio.addEventListener("click", async () => {
 });
 
 // ===== DJ Mode =====
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  const silent = new Audio();
+  silent.play().catch(() => {});
+  audioUnlocked = true;
+}
+
 btnDj.addEventListener("click", () => {
+  unlockAudio();
   djEnabled = !djEnabled;
   btnDj.textContent = djEnabled ? "🎙️ DJ On" : "🎙️ DJ Off";
   btnDj.classList.toggle("active", djEnabled);
@@ -270,7 +280,15 @@ async function triggerDjClip(current, next) {
 
     if (data.url) {
       djAudio = new Audio(data.url);
-      djAudio.play();
+      const playPromise = djAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(async () => {
+          // Autoplay blocked — resume Spotify and bail
+          djBusy = false;
+          setStatus("");
+          await fetch("/player/play-pause", { method: "POST" });
+        });
+      }
       setStatus("🎙️ Alex is on air...");
       djAudio.onended = async () => {
         djAudio = null;
